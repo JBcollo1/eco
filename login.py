@@ -8,7 +8,7 @@ from models import db, User
 from flask_jwt_extended import create_access_token
 from mail import mail  # Assuming mail.py contains the Mail instance
 import logging
-
+import secrets
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -61,49 +61,72 @@ class RegisterUser(Resource):
         return jsonify({'message': 'Registration successful! Please check your email for a verification code.'}), 201
 
 
-
-
 class ResendVerification(Resource):
     def post(self):
         data = request.get_json()
+        logging.debug(f"Received data: {data}")
 
         if not data:
-            return jsonify({'error': 'No data provided'}), 400
+            return {'error': 'No data provided'}, 400
 
         email = data.get('email')
+        logging.debug(f"Extracted email: {email}")
         if not email:
-            return jsonify({'error': 'Email is required'}), 400
+            return {'error': 'Email is required'}, 400
 
         user = User.query.filter_by(email=email).first()
         if not user:
-            return jsonify({'error': 'User not found'}), 404
+            return {'error': 'User not found'}, 404
 
         if user.is_verified:
-            return jsonify({'error': 'User is already verified'}), 400
+            return {'error': 'User is already verified'}, 400
 
+        # Generate verification code and expiration time
         verification_code = self._generate_verification_code()
         expiration_time = datetime.utcnow() + timedelta(hours=1)
 
+        # Update user verification details
         user.verification_code = verification_code
         user.verification_code_expiration = expiration_time
 
-        try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': 'Failed to update user information.'}), 500
+        if not self._update_user(user):
+            return {'error': 'Failed to update user information.'}, 500
 
         if not self._send_verification_email(email, verification_code):
-            return jsonify({'error': 'Failed to resend verification email. Please try again later.'}), 500
+            return {'error': 'Failed to resend verification email. Please try again later.'}, 500
 
-        return jsonify({'message': 'A new verification code has been sent to your email.'}), 200
+        response_data = {'message': 'A new verification code has been sent to your email.'}
+        logging.debug(f"Returning response: {response_data}")
+        return response_data, 200
+
+    def _generate_verification_code(self):
+        """Generate a random verification code."""
+        return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
+
+    def _update_user(self, user):
+        """Update user verification details in the database."""
+        try:
+            db.session.commit()
+            logging.debug(f"User verification details updated successfully for {user.email}.")
+            return True
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error updating user {user.email}: {str(e)}")
+            return False
 
     def _send_verification_email(self, email, verification_code):
-        # Email sending logic here
-        return True  # Change this as needed for actual email sending
+        """Send verification email to the user."""
+        msg = Message('Email Verification', recipients=[email])
+        msg.body = f'Your new verification code is {verification_code}. It is valid for 1 hour.'
 
-
-
+        try:
+            mail.send(msg)
+            logging.info(f"Verification email sent to {email}.")
+            return True
+        except Exception as e:
+            logging.error(f"Failed to send email to {email}: {str(e)}")
+            return False
+        
 class VerifyEmail(Resource):
     def post(self):
         data = request.get_json()
@@ -113,18 +136,18 @@ class VerifyEmail(Resource):
         user = User.query.filter_by(email=email).first()
 
         if not user:
-            return jsonify({'error': 'User not found'}), 404
+            return {'error': 'User not found'}, 404
         if user.verification_code != verification_code:
-            return jsonify({'error': 'Invalid verification code'}), 400
+            return {'error': 'Invalid verification code'}, 400
         if datetime.utcnow() > user.verification_code_expiration:
-            return jsonify({'error': 'Verification code has expired'}), 400
+            return {'error': 'Verification code has expired'}, 400
 
         user.is_verified = True
         user.verification_code = None
         user.verification_code_expiration = None
         db.session.commit()
 
-        return jsonify({'message': 'Email verified successfully! You can now log in.'}), 200
+        return {'message': 'Email verified successfully! You can now log in.'}, 200
 
 class LoginUser(Resource):
     def post(self):
