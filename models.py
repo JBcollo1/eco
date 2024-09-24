@@ -13,21 +13,54 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    verification_code = db.Column(db.String(50), nullable=True)
+    is_verified = db.Column(db.Boolean, default=False)
+    verification_code_expiration = db.Column(db.DateTime, nullable=True)
 
-    posts = db.relationship('Post', back_populates='user', lazy='dynamic')  # One-to-many relationship with Post
-    comments = db.relationship('Comment', back_populates='user', lazy='dynamic')  # One-to-many relationship with Comment
-    likes = db.relationship('Like', back_populates='user', lazy='dynamic')  # One-to-many relationship with Like
+    posts = db.relationship('Post', back_populates='user', lazy='dynamic')
+    comments = db.relationship('Comment', back_populates='user', lazy='dynamic')
+    likes = db.relationship('Like', back_populates='user', lazy='dynamic')
+
+    # Follow relationships
+    following = db.relationship('Follow', 
+                                 foreign_keys='Follow.follower_id', 
+                                 back_populates='follower', 
+                                 lazy='dynamic',
+                                 cascade='all, delete-orphan')
+    followers = db.relationship('Follow', 
+                                 foreign_keys='Follow.followed_id', 
+                                 back_populates='followed', 
+                                 lazy='dynamic',
+                                 cascade='all, delete-orphan')
+    notifications = db.relationship('Notification', back_populates='user', lazy='dynamic')
+
+    def follow(self, user):
+        """Follow a user."""
+        if not self.is_following(user):
+            follow = Follow(follower_id=self.id, followed_id=user.id)
+            db.session.add(follow)
+
+    def unfollow(self, user):
+        """Unfollow a user."""
+        follow = self.following.filter_by(followed_id=user.id).first()
+        if follow:
+            db.session.delete(follow)
+
+    def is_following(self, user):
+        """Check if the user is following another user."""
+        return self.following.filter_by(followed_id=user.id).first() is not None
+
+    def is_followed_by(self, user):
+        """Check if the user is followed by another user."""
+        return self.followers.filter_by(follower_id=user.id).first() is not None
 
     def set_password(self, password):
-        """Hashes the password and stores it in the password_hash field."""
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        """Checks if the given password matches the stored password hash."""
         return check_password_hash(self.password_hash, password)
 
     def as_dict(self):
-        """Returns a dictionary representation of the User object."""
         return {
             'id': self.id,
             'first_name': self.first_name,
@@ -41,79 +74,165 @@ class User(db.Model):
     def __repr__(self):
         return f'<User {self.user_name}>'
 
-
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Foreign key to the User table
-    content = db.Column(db.Text, nullable=False)  # The main content of the post
-    image_url = db.Column(db.String(255))  # Optional field for images
+    content = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    user = db.relationship('User', back_populates='posts')  # Establishes a relationship with the User model
-    comments = db.relationship('Comment', back_populates='post', lazy='dynamic')  # One-to-many relationship with Comment
-    likes = db.relationship('Like', back_populates='post', lazy='dynamic')  # One-to-many relationship with Like
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    user = db.relationship('User', back_populates='posts')
+    comments = db.relationship('Comment', back_populates='post', lazy='dynamic')
+    likes = db.relationship('Like', back_populates='post', lazy='dynamic')
+    tags = db.relationship('PostTag', back_populates='post', lazy='dynamic')
 
     def as_dict(self):
-        """Returns a dictionary representation of the Post object."""
         return {
             'id': self.id,
-            'user_id': self.user_id,
             'content': self.content,
-            'image_url': self.image_url,
             'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
+            'user_id': self.user_id
         }
 
     def __repr__(self):
-        return f'<Post {self.id} by User {self.user_id}>'
-
+        return f'<Post {self.id}>'
 
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)  # Foreign key to Post
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Foreign key to User
-    content = db.Column(db.Text, nullable=False)  # The content of the comment
+    content = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    # Relationships
-    user = db.relationship('User', back_populates='comments')  # Establishes a relationship with the User model
-    post = db.relationship('Post', back_populates='comments')  # Establishes a relationship with the Post model
+    post = db.relationship('Post', back_populates='comments')
+    user = db.relationship('User', back_populates='comments')
 
     def as_dict(self):
-        """Returns a dictionary representation of the Comment object."""
         return {
             'id': self.id,
-            'post_id': self.post_id,
-            'user_id': self.user_id,
             'content': self.content,
             'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
+            'post_id': self.post_id,
+            'user_id': self.user_id
         }
 
     def __repr__(self):
-        return f'<Comment {self.id} on Post {self.post_id} by User {self.user_id}>'
-
+        return f'<Comment {self.id}>'
 
 class Like(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Foreign key to User
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)  # Foreign key to Post
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # When the like was created
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
-    user = db.relationship('User', back_populates='likes')  # Establishes a relationship with the User model
-    post = db.relationship('Post', back_populates='likes')  # Establishes a relationship with the Post model
+    post = db.relationship('Post', back_populates='likes')
+    user = db.relationship('User', back_populates='likes')
 
     def as_dict(self):
-        """Returns a dictionary representation of the Like object."""
         return {
             'id': self.id,
-            'user_id': self.user_id,
             'post_id': self.post_id,
+            'user_id': self.user_id,
             'created_at': self.created_at.isoformat()
         }
 
     def __repr__(self):
-        return f'<Like {self.id} by User {self.user_id} on Post {self.post_id}>'
+        return f'<Like {self.id}>'
+
+class Follow(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    followed_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    follower = db.relationship('User', foreign_keys=[follower_id], back_populates='following')
+    followed = db.relationship('User', foreign_keys=[followed_id], back_populates='followers')
+
+    def __repr__(self):
+        return f'<Follow {self.follower_id} follows {self.followed_id}>'
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.String, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    sender = db.relationship('User', foreign_keys=[sender_id])
+    receiver = db.relationship('User', foreign_keys=[receiver_id])
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'sender_id': self.sender_id,
+            'receiver_id': self.receiver_id,
+            'content': self.content,
+            'created_at': self.created_at.isoformat()
+        }
+
+    def __repr__(self):
+        return f'<Message {self.id}>'
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.String, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', back_populates='notifications')
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'message': self.message,
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat()
+        }
+
+    def __repr__(self):
+        return f'<Notification {self.id}>'
+
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+
+    posts = db.relationship('PostTag', back_populates='tag', lazy='dynamic')
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name
+        }
+
+class PostTag(db.Model):
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), primary_key=True)
+    tag_id = db.Column(db.Integer, db.ForeignKey('tag.id'), primary_key=True)
+
+    post = db.relationship('Post', back_populates='tags')
+    tag = db.relationship('Tag', back_populates='posts')
+
+class Report(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=True)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=True)
+    reason = db.Column(db.String, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User')
+    post = db.relationship('Post', backref='reports', foreign_keys=[post_id])
+    comment = db.relationship('Comment', backref='reports', foreign_keys=[comment_id])
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'post_id': self.post_id,
+            'comment_id': self.comment_id,
+            'reason': self.reason,
+            'created_at': self.created_at.isoformat()
+        }
+
+    def __repr__(self):
+        return f'<Report {self.id}>'
