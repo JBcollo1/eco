@@ -15,6 +15,8 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     posts = db.relationship('Post', back_populates='user', lazy='dynamic')  # One-to-many relationship with Post
+    comments = db.relationship('Comment', back_populates='user', lazy='dynamic')  # One-to-many relationship with Comment
+    likes = db.relationship('Like', back_populates='user', lazy='dynamic')  # One-to-many relationship with Like
 
     def set_password(self, password):
         """Hashes the password and stores it in the password_hash field."""
@@ -49,6 +51,8 @@ class Post(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     user = db.relationship('User', back_populates='posts')  # Establishes a relationship with the User model
+    comments = db.relationship('Comment', back_populates='post', lazy='dynamic')  # One-to-many relationship with Comment
+    likes = db.relationship('Like', back_populates='post', lazy='dynamic')  # One-to-many relationship with Like
 
     def as_dict(self):
         """Returns a dictionary representation of the Post object."""
@@ -63,3 +67,53 @@ class Post(db.Model):
 
     def __repr__(self):
         return f'<Post {self.id} by User {self.user_id}>'
+
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)  # Foreign key to Post
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Foreign key to User
+    content = db.Column(db.Text, nullable=False)  # The content of the comment
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    user = db.relationship('User', back_populates='comments')  # Establishes a relationship with the User model
+    post = db.relationship('Post', back_populates='comments')  # Establishes a relationship with the Post model
+
+    def as_dict(self):
+        """Returns a dictionary representation of the Comment object."""
+        return {
+            'id': self.id,
+            'post_id': self.post_id,
+            'user_id': self.user_id,
+            'content': self.content,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+
+    def __repr__(self):
+        return f'<Comment {self.id} on Post {self.post_id} by User {self.user_id}>'
+
+
+class Like(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Foreign key to User
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)  # Foreign key to Post
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # When the like was created
+
+    # Relationships
+    user = db.relationship('User', back_populates='likes')  # Establishes a relationship with the User model
+    post = db.relationship('Post', back_populates='likes')  # Establishes a relationship with the Post model
+
+    def as_dict(self):
+        """Returns a dictionary representation of the Like object."""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'post_id': self.post_id,
+            'created_at': self.created_at.isoformat()
+        }
+
+    def __repr__(self):
+        return f'<Like {self.id} by User {self.user_id} on Post {self.post_id}>'
