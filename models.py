@@ -102,6 +102,9 @@ class Post(db.Model):
     content = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    image_url = db.Column(db.String, nullable=True)
+    video_url = db.Column(db.String, nullable=True)
+
 
     user = db.relationship('User', back_populates='posts')
     comments = db.relationship('Comment', back_populates='post', lazy='dynamic')

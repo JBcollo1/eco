@@ -9,12 +9,16 @@ from login import RegisterUser, LoginUser, VerifyEmail, ResendVerification
 from mail import mail
 from user_profile import UserProfile
 
+from User_post import Upload, PostListResource
+
 app = Flask(__name__)
 api = Api(app)
 jwt = JWTManager(app)
 
 migrate = Migrate(app, db)
 CORS(app)
+
+
 
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///eco.db'
@@ -40,6 +44,9 @@ api.add_resource(LoginUser, '/auth/login/user')
 api.add_resource(VerifyEmail, '/auth/verify/user')
 api.add_resource(ResendVerification, '/auth/resend/user')
 api.add_resource(UserProfile, '/profile/<int:user_id>')
+api.add_resource(Upload, '/upload/<int:user_id>')
+api.add_resource(PostListResource, '/list')
+
 
 
 
