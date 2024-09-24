@@ -3,36 +3,38 @@ from flask import request, jsonify, current_app
 from models import Profile, db
 import os
 from werkzeug.utils import secure_filename
+from flask_jwt_extended import jwt_required
 
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 class UserProfile(Resource):
+    @jwt_required()
     def post(self):
         data = request.form
-        user_id = data.get('user_id')  # Assuming you're passing user_id in the request
+        user_id = data.get('user_id')
         bio = data.get('bio')
         location = data.get('location')
         date_of_birth = data.get('DOB')
-        profile_picture = request.files.get('profile_picture')  # Get the uploaded file
+        profile_picture = request.files.get('profile_picture')
 
-        # Check if a profile already exists for the user
         profile = Profile.query.filter_by(user_id=user_id).first()
 
-        # Handle the profile picture upload
-        if profile_picture:
+        profile_picture_url = None
+        if profile_picture and allowed_file(profile_picture.filename):
             filename = secure_filename(profile_picture.filename)
             profile_picture.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
             profile_picture_url = f"/{current_app.config['UPLOAD_FOLDER']}/{filename}"
-        else:
-            profile_picture_url = None
 
         if profile:
-            # Update existing profile
             profile.bio = bio
             profile.location = location
             profile.date_of_birth = date_of_birth
-            profile.profile_picture = profile_picture_url
+            if profile_picture_url:
+                profile.profile_picture = profile_picture_url
         else:
-            # Create a new profile
             profile = Profile(
                 user_id=user_id,
                 bio=bio,
@@ -45,13 +47,14 @@ class UserProfile(Resource):
         db.session.commit()
         return jsonify({"message": "Profile saved successfully!"}), 200
 
+    @jwt_required()
     def get(self, user_id):
         profile = Profile.query.filter_by(user_id=user_id).first()
         if not profile:
             return jsonify({"message": "Profile not found"}), 404
-
         return jsonify(profile.as_dict()), 200
 
+    @jwt_required()
     def delete(self, user_id):
         profile = Profile.query.filter_by(user_id=user_id).first()
         if not profile:
@@ -60,31 +63,26 @@ class UserProfile(Resource):
         db.session.delete(profile)
         db.session.commit()
         return jsonify({"message": "Profile deleted successfully!"}), 200
+
+    @jwt_required()
     def patch(self, user_id):
-        data = request.get_json()
-        
-        # Fetch the profile from the database
+        data = request.form
         profile = Profile.query.filter_by(user_id=user_id).first()
         if not profile:
             return jsonify({'message': 'Profile not found'}), 404
-        
-        # Update fields if they are present in the request
+
         if 'bio' in data:
             profile.bio = data['bio']
         if 'location' in data:
             profile.location = data['location']
         if 'date_of_birth' in data:
             profile.date_of_birth = data['date_of_birth']
-        
-        # Handle profile picture upload if provided
-        if 'profile_picture' in request.files:
-            profile_picture = request.files['profile_picture']
-            if profile_picture:
-                filename = secure_filename(profile_picture.filename)
-                profile_picture.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-                profile.profile_picture = filename  # Update profile picture filename
-        
-        # Commit the changes to the database
+
+        profile_picture = request.files.get('profile_picture')
+        if profile_picture and allowed_file(profile_picture.filename):
+            filename = secure_filename(profile_picture.filename)
+            profile_picture.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+            profile.profile_picture = f"/{current_app.config['UPLOAD_FOLDER']}/{filename}"
+
         db.session.commit()
-        
         return jsonify({'message': 'Profile updated successfully', 'profile': profile.as_dict()}), 200
