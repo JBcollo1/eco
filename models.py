@@ -110,13 +110,20 @@ class Post(db.Model):
     comments = db.relationship('Comment', back_populates='post', lazy='dynamic')
     likes = db.relationship('Like', back_populates='post', lazy='dynamic')
     tags = db.relationship('PostTag', back_populates='post', lazy='dynamic')
+    
+
+
+    def like_count(self):
+        return Like.query.filter_by(post_id=self.id).count()
+    
 
     def as_dict(self):
         return {
             'id': self.id,
             'content': self.content,
             'created_at': self.created_at.isoformat(),
-            'user_id': self.user_id
+            'user_id': self.user_id,
+            'likes': self.like_count() 
         }
 
     def __repr__(self):

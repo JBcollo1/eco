@@ -4,6 +4,9 @@ from flask_uploads import UploadSet
 from models import db, Post
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from uploads import videos, photos
+from werkzeug.utils import secure_filename
+
+
 
 
 class Upload(Resource):
