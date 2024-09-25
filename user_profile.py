@@ -1,8 +1,7 @@
 from flask_restful import Resource
 from flask import request, jsonify, current_app
 from models import Profile, db
-import os
-from werkzeug.utils import secure_filename
+import cloudinary.uploader  # Import the Cloudinary uploader
 from flask_jwt_extended import jwt_required
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -24,9 +23,9 @@ class UserProfile(Resource):
 
         profile_picture_url = None
         if profile_picture and allowed_file(profile_picture.filename):
-            filename = secure_filename(profile_picture.filename)
-            profile_picture.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-            profile_picture_url = f"/{current_app.config['UPLOAD_FOLDER']}/{filename}"
+            # Upload profile picture to Cloudinary
+            cloudinary_response = cloudinary.uploader.upload(profile_picture)
+            profile_picture_url = cloudinary_response['secure_url']  # Get the secure URL of the uploaded image
 
         if profile:
             profile.bio = bio
@@ -80,9 +79,9 @@ class UserProfile(Resource):
 
         profile_picture = request.files.get('profile_picture')
         if profile_picture and allowed_file(profile_picture.filename):
-            filename = secure_filename(profile_picture.filename)
-            profile_picture.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-            profile.profile_picture = f"/{current_app.config['UPLOAD_FOLDER']}/{filename}"
+            # Upload new profile picture to Cloudinary
+            cloudinary_response = cloudinary.uploader.upload(profile_picture)
+            profile.profile_picture = cloudinary_response['secure_url']  # Update the profile picture URL
 
         db.session.commit()
         return jsonify({'message': 'Profile updated successfully', 'profile': profile.as_dict()}), 200

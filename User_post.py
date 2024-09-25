@@ -1,35 +1,35 @@
 from flask import request, jsonify
 from flask_restful import Resource
-from flask_uploads import UploadSet
 from models import db, Post
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from uploads import videos, photos
-from werkzeug.utils import secure_filename
-
-
-
+import cloudinary.uploader  # Import the Cloudinary uploader
 
 class Upload(Resource):
+    @jwt_required()
     def post(self, user_id):
         # Extract content from the request
         content = request.form.get('content')  # Get the content from form data
         
+        # Initialize photo and video URLs
+        photo_url = None
+        video_url = None
+
         # Check for photo uploads
         if 'photo' in request.files:
             photo = request.files['photo']
-            photo_path = photos.save(photo)  # Save the photo
-        else:
-            photo_path = None  # No photo uploaded
+            # Upload photo to Cloudinary
+            cloudinary_response = cloudinary.uploader.upload(photo)
+            photo_url = cloudinary_response['secure_url']  # Get the secure URL of the uploaded photo
 
         # Check for video uploads
         if 'video' in request.files:
             video = request.files['video']
-            video_path = videos.save(video)  # Save the video
-        else:
-            video_path = None  # No video uploaded
+            # Upload video to Cloudinary
+            cloudinary_response = cloudinary.uploader.upload(video, resource_type='video')
+            video_url = cloudinary_response['secure_url']  # Get the secure URL of the uploaded video
 
         # Create a Post instance with the provided content and user_id
-        new_post = Post(content=content, user_id=user_id)
+        new_post = Post(content=content, user_id=user_id, image_url=photo_url, video_url=video_url)
 
         # Save the post to the database
         db.session.add(new_post)
@@ -39,12 +39,13 @@ class Upload(Resource):
             'message': 'Post created successfully',
             'post_id': new_post.id,
             'content': new_post.content,
-            'photo_url': photo_path,
-            'video_url': video_path,
+            'photo_url': photo_url,
+            'video_url': video_url,
             'created_at': new_post.created_at.isoformat()
         }
 
         return jsonify(response_data), 201
+
     @jwt_required()
     def patch(self, post_id):
         """Update a post by ID."""
@@ -66,17 +67,20 @@ class Upload(Resource):
         # Handle photo uploads (if a new photo is being added)
         if 'photo' in request.files:
             photo = request.files['photo']
-            photo_path = photos.save(photo)
-            post.image_url = photo_path  # Save the photo URL in the post model
+            # Upload photo to Cloudinary
+            cloudinary_response = cloudinary.uploader.upload(photo)
+            post.image_url = cloudinary_response['secure_url']  # Save the photo URL in the post model
 
         # Handle video uploads (if a new video is being added)
         if 'video' in request.files:
             video = request.files['video']
-            video_path = videos.save(video)
-            post.video_url = video_path  # Save the video URL in the post model
+            # Upload video to Cloudinary
+            cloudinary_response = cloudinary.uploader.upload(video, resource_type='video')
+            post.video_url = cloudinary_response['secure_url']  # Save the video URL in the post model
 
         db.session.commit()  
         return jsonify({'message': 'Post updated successfully'}), 200
+
     @jwt_required()
     def delete(self, post_id):
         """Delete a post by ID."""
@@ -91,6 +95,7 @@ class Upload(Resource):
         db.session.delete(post)  # Delete the post
         db.session.commit()  # Commit the deletion
         return jsonify({'message': 'Post deleted successfully'}), 200
+
     @jwt_required()
     def get(self, post_id):
         """Retrieve a post by ID."""
@@ -99,9 +104,6 @@ class Upload(Resource):
             return jsonify({'message': 'Post not found'}), 404
 
         return jsonify(post.as_dict()), 200
-
-    
-
 
 class PostListResource(Resource):
     @jwt_required()
