@@ -72,7 +72,7 @@ class Upload(Resource):
             video_path = videos.save(video)
             post.video_url = video_path  # Save the video URL in the post model
 
-        db.session.commit()  # Commit the changes to the database
+        db.session.commit()  
         return jsonify({'message': 'Post updated successfully'}), 200
     @jwt_required()
     def delete(self, post_id):
@@ -100,11 +100,17 @@ class Upload(Resource):
     
 
 
-
-
 class PostListResource(Resource):
     @jwt_required()
     def get(self):
-        """Retrieve a list of posts."""
-        posts = Post.query.all()  # Get all posts (you may want to limit this for performance)
-        return jsonify([post.as_dict() for post in posts]), 200
+        """Retrieve a paginated list of posts."""
+        page = request.args.get('page', 1, type=int)  
+        per_page = request.args.get('per_page', 10, type=int)  
+
+        posts = Post.query.paginate(page, per_page, error_out=False)
+        return jsonify({
+            'posts': [post.as_dict() for post in posts.items],
+            'total': posts.total,
+            'page': posts.page,
+            'per_page': posts.per_page
+        }), 200
