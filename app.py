@@ -8,7 +8,7 @@ from flask_jwt_extended import JWTManager
 from login import RegisterUser, LoginUser, VerifyEmail, ResendVerification
 from mail import mail
 from user_profile import UserProfile
-
+from dotenv import load_dotenv
 from User_post import Upload, PostListResource
 from user_comment import AddComment, GetComments, UpdateComment, DeleteComment
 from like_post import LikePost
@@ -19,7 +19,7 @@ jwt = JWTManager(app)
 migrate = Migrate(app, db)
 CORS(app)
 
-
+load_dotenv()
 
 import cloudinary
 import cloudinary.uploader
@@ -43,9 +43,9 @@ db.init_app(app)
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'jbcollins254@gmail.com'  
-app.config['MAIL_PASSWORD'] = 'rbcp btoe tzjn umvl'  
-app.config['MAIL_DEFAULT_SENDER'] = 'jbcollins254@gmail.com'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 
 mail.init_app(app)
 
