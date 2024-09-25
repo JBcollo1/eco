@@ -10,6 +10,7 @@ from mail import mail
 from user_profile import UserProfile
 
 from User_post import Upload, PostListResource
+from user_comment import AddComment, GetComments, UpdateComment, DeleteComment
 
 app = Flask(__name__)
 api = Api(app)
@@ -40,12 +41,17 @@ app.config['MAIL_DEFAULT_SENDER'] = 'jbcollins254@gmail.com'
 mail.init_app(app)
 
 api.add_resource(RegisterUser, '/auth/register/user')
+
 api.add_resource(LoginUser, '/auth/login/user')
 api.add_resource(VerifyEmail, '/auth/verify/user')
 api.add_resource(ResendVerification, '/auth/resend/user')
 api.add_resource(UserProfile, '/profile/<int:user_id>')
 api.add_resource(Upload, '/upload/<int:user_id>')
 api.add_resource(PostListResource, '/list')
+api.add_resource(AddComment, '/post/<int:post_id>/comment')
+api.add_resource(GetComments, '/post/<int:post_id>/comments')
+api.add_resource(UpdateComment, '/comment/<int:comment_id>')
+api.add_resource(DeleteComment, '/comment/<int:comment_id>')
 
 
 
