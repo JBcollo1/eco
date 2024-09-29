@@ -240,6 +240,11 @@ class LoginUser(Resource):
 
         user = User.query.filter_by(email=email).first()
 
+
+        if not user:
+            return jsonify({'error': 'Invalid email or password'}), 401
+
+
         if not user or not user.check_password(password):
             return jsonify({'error': 'Invalid email or password'}), 401
         if not user.is_verified:
