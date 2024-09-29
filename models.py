@@ -90,7 +90,7 @@ class Profile(db.Model):
             "bio": self.bio,
             "profile_picture": self.profile_picture,
             "location": self.location,
-            "date_of_birth": self.date_of_birth
+           'date_of_birth': self.date_of_birth.strftime('%Y-%m-%d') if self.date_of_birth else None,
         }
 
     def __repr__(self):

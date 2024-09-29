@@ -30,10 +30,12 @@ cloudinary.config(
     api_key=os.getenv('CLOUDINARY_API_KEY'),
     api_secret=os.getenv('CLOUDINARY_API_SECRET')
 )
-
+from datetime import timedelta
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///eco.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')  # Use env variable
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY')
 app.config['UPLOAD_FOLDER'] = 'uploads'  # Folder to store uploaded files
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit to 16 MB
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
@@ -54,7 +56,7 @@ api.add_resource(RegisterUser, '/auth/register/user')
 api.add_resource(LoginUser, '/auth/login/user')
 api.add_resource(VerifyEmail, '/auth/verify/user')
 api.add_resource(ResendVerification, '/auth/resend/user')
-api.add_resource(UserProfile, '/profile/<int:user_id>')
+api.add_resource(UserProfile, '/profile','/profile/<int:user_id>')
 api.add_resource(Upload, '/upload/<int:user_id>')
 api.add_resource(PostListResource, '/list')
 api.add_resource(AddComment, '/post/<int:post_id>/comment')

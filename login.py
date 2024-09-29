@@ -242,13 +242,13 @@ class LoginUser(Resource):
 
 
         if not user:
-            return jsonify({'error': 'Invalid email or password'}), 401
+            return {'error': 'Invalid email or password'}, 401
 
 
         if not user or not user.check_password(password):
-            return jsonify({'error': 'Invalid email or password'}), 401
+            return {'error': 'Invalid email or password'}, 401
         if not user.is_verified:
-            return jsonify({'error': 'User is not verified'}), 403
+            return {'error': 'User is not verified'}, 403
 
         access_token = create_access_token(
             identity={
@@ -259,4 +259,4 @@ class LoginUser(Resource):
                 'email': user.email
             }
         )
-        return jsonify({'access_token': access_token, 'message': 'Login successful'}), 200
+        return {'access_token': access_token, 'message': 'Login successful'}, 200
