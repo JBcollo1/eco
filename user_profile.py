@@ -88,44 +88,52 @@ class UserProfile(Resource):
         return jsonify({"message": "Profile deleted successfully!"}), 200
     @jwt_required()
     def patch(self, user_id):
-        data = request.form
-        logging.debug(f'Received update request for user_id: {user_id} with data: {data}')
-
-        profile = Profile.query.filter_by(user_id=user_id).first()
-
-        if not profile:
-            logging.warning(f'Profile not found for user_id: {user_id}')
-            return {'message': 'Profile not found'}, 404
-
-        if 'bio' in data:
-            profile.bio = data['bio']
-            logging.info(f'Updated bio for user_id: {user_id} to: {profile.bio}')
-
-        if 'location' in data:
-            profile.location = data['location']
-            logging.info(f'Updated location for user_id: {user_id} to: {profile.location}')
-
-        if 'DOB' in data:
-            profile.date_of_birth = datetime.strptime(data['DOB'], '%Y-%m-%d').date()
-            logging.info(f'Updated date of birth for user_id: {user_id} to: {profile.date_of_birth}')
-
-        profile_picture = request.files.get('profile_picture')
-        if profile_picture and allowed_file(profile_picture.filename):
-            try:
-                # Upload new profile picture to Cloudinary
-                cloudinary_response = cloudinary.uploader.upload(profile_picture)
-                profile.profile_picture = cloudinary_response['secure_url']  # Update the profile picture URL
-                logging.info(f'Uploaded new profile picture for user_id: {user_id}')
-            except Exception as e:
-                logging.error(f'Failed to upload profile picture for user_id: {user_id}. Error: {str(e)}')
-                return {'message': 'Failed to upload profile picture', 'error': str(e)}, 500
-
         try:
-            db.session.commit()
-            logging.info(f'Profile updated successfully for user_id: {user_id}')
-        except Exception as e:
-            db.session.rollback()  # Rollback the session on error
-            logging.error(f'Failed to update profile for user_id: {user_id}. Error: {str(e)}')
-            return {'message': 'Failed to update profile', 'error': str(e)}, 500
+            # Retrieve the profile for the given user_id
+            profile = Profile.query.filter_by(user_id=user_id).first()
+            if not profile:
+                return {'message': 'Profile not found'}, 404
 
-        return {'message': 'Profile updated successfully'}, 200
+            # Parse the form data (bio, location, DOB)
+            data = request.form
+
+            # Update fields only if they are provided, otherwise keep existing values
+            if 'bio' in data:
+                profile.bio = data.get('bio', profile.bio)
+            if 'location' in data:
+                profile.location = data.get('location', profile.location)
+
+            # Handle date of birth update if provided
+            if 'DOB' in data:
+                try:
+                    profile.date_of_birth = datetime.strptime(data['DOB'], '%Y-%m-%d').date()
+                except ValueError:
+                    return {'message': 'Invalid date format. Expected format: YYYY-MM-DD'}, 400
+
+            # Handle profile picture if provided
+            profile_picture = request.files.get('profile_picture')
+            if profile_picture:
+                if allowed_file(profile_picture.filename):
+                    try:
+                        # Upload new profile picture to Cloudinary
+                        cloudinary_response = cloudinary.uploader.upload(profile_picture)
+                        profile.profile_picture = cloudinary_response['secure_url']  # Update the profile picture URL
+                        logging.info(f"Uploaded new profile picture for user_id: {user_id}")
+                    except Exception as e:
+                        logging.error(f"Failed to upload profile picture for user_id: {user_id}. Error: {str(e)}")
+                        return {'message': 'Failed to upload profile picture', 'error': str(e)}, 500
+                else:
+                    return {'message': 'Invalid file type for profile picture'}, 400
+            else:
+                logging.info(f"No new profile picture provided for user_id: {user_id}")
+
+            # Commit the changes to the database
+            db.session.commit()
+            logging.info(f"Successfully updated profile for user_id: {user_id}")
+            return {'message': 'Profile updated successfully', 'profile': profile.as_dict()}, 200
+
+        except Exception as e:
+            # Rollback the session if there's an error and log the error
+            db.session.rollback()
+            logging.error(f"Failed to update profile for user_id: {user_id}. Error: {str(e)}")
+            return {'message': 'Failed to update profile', 'error': str(e)}, 500

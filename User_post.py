@@ -8,43 +8,47 @@ class Upload(Resource):
     @jwt_required()
     def post(self, user_id):
         # Extract content from the request
-        content = request.form.get('content')  # Get the content from form data
+        content = request.form.get('content')
         
+       
+
         # Initialize photo and video URLs
         photo_url = None
         video_url = None
 
-        # Check for photo uploads
-        if 'photo' in request.files:
-            photo = request.files['photo']
-            # Upload photo to Cloudinary
-            cloudinary_response = cloudinary.uploader.upload(photo)
-            photo_url = cloudinary_response['secure_url']  # Get the secure URL of the uploaded photo
+        try:
+            # Check for photo uploads
+            if 'photo' in request.files:
+                photo = request.files['photo']
+                cloudinary_response = cloudinary.uploader.upload(photo)
+                photo_url = cloudinary_response['secure_url']
 
-        # Check for video uploads
-        if 'video' in request.files:
-            video = request.files['video']
-            # Upload video to Cloudinary
-            cloudinary_response = cloudinary.uploader.upload(video, resource_type='video')
-            video_url = cloudinary_response['secure_url']  # Get the secure URL of the uploaded video
+            # Check for video uploads
+            if 'video' in request.files:
+                video = request.files['video']
+                cloudinary_response = cloudinary.uploader.upload(video, resource_type='video')
+                video_url = cloudinary_response['secure_url']
 
-        # Create a Post instance with the provided content and user_id
-        new_post = Post(content=content, user_id=user_id, image_url=photo_url, video_url=video_url)
+            # Create a Post instance with the provided content and user_id
+            new_post = Post(content=content, user_id=user_id, image_url=photo_url, video_url=video_url)
 
-        # Save the post to the database
-        db.session.add(new_post)
-        db.session.commit()
+            # Save the post to the database
+            db.session.add(new_post)
+            db.session.commit()
 
-        response_data = {
-            'message': 'Post created successfully',
-            'post_id': new_post.id,
-            'content': new_post.content,
-            'photo_url': photo_url,
-            'video_url': video_url,
-            'created_at': new_post.created_at.isoformat()
-        }
+            response_data = {
+                'message': 'Post created successfully',
+                'post_id': new_post.id,
+                'content': new_post.content,
+                'photo_url': photo_url,
+                'video_url': video_url,
+                'created_at': new_post.created_at.isoformat()
+            }
 
-        return jsonify(response_data), 201
+            return jsonify(response_data), 201
+
+        except Exception as e:
+            return jsonify({'message': str(e)}), 500  # Return a 500 error with the error message
 
     @jwt_required()
     def patch(self, post_id):
