@@ -45,7 +45,7 @@ class Upload(Resource):
                 'created_at': new_post.created_at.isoformat()
             }
 
-            return jsonify(response_data), 201
+            return response_data, 201
 
         except Exception as e:
             return jsonify({'message': str(e)}), 500  # Return a 500 error with the error message
