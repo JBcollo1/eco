@@ -114,12 +114,16 @@ class PostListResource(Resource):
     def get(self):
         """Retrieve a paginated list of posts."""
         page = request.args.get('page', 1, type=int)  
-        per_page = request.args.get('per_page', 10, type=int)  
+        per_page = request.args.get('per_page', 1, type=int)  
 
-        posts = Post.query.paginate(page, per_page, error_out=False)
-        return jsonify({
+        posts = Post.query.paginate(page=page, per_page=per_page, error_out=False)
+        next_page = posts.page + 1 if posts.has_next else None
+        prev_page = posts.page - 1 if posts.has_prev else None
+        return {
             'posts': [post.as_dict() for post in posts.items],
             'total': posts.total,
             'page': posts.page,
-            'per_page': posts.per_page
-        }), 200
+            'per_page': posts.per_page,
+            'next_page': next_page,
+            'prev_page': prev_page
+        }, 200

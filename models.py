@@ -121,6 +121,8 @@ class Post(db.Model):
         return {
             'id': self.id,
             'content': self.content,
+            'photo_url': self.image_url,
+            'video_url': self.video_url,
             'created_at': self.created_at.isoformat(),
             'user_id': self.user_id,
             'likes': self.like_count() 
