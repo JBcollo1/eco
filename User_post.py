@@ -125,5 +125,7 @@ class PostListResource(Resource):
             'page': posts.page,
             'per_page': posts.per_page,
             'next_page': next_page,
-            'prev_page': prev_page
+            'prev_page': prev_page,
+            'has_next_page': posts.has_next,  # Indicate if more pages are available
+            'has_prev_page': posts.has_prev
         }, 200
