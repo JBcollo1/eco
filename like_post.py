@@ -6,7 +6,8 @@ from models import db, Like, Post
 class LikePost(Resource):
     @jwt_required()
     def post(self, post_id):
-        user_id = get_jwt_identity()
+        user = get_jwt_identity()
+        user_id = user.get('id') if isinstance(user, dict) else user
 
         post = Post.query.get(post_id)
         if not post:
@@ -26,7 +27,8 @@ class LikePost(Resource):
 
     @jwt_required()
     def delete(self, post_id):
-        user_id = get_jwt_identity()
+        user = get_jwt_identity()
+        user_id = user.get('id') if isinstance(user, dict) else user
 
         post = Post.query.get(post_id)
         if not post:

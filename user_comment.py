@@ -2,12 +2,13 @@ from flask import request, jsonify
 from flask_restful import Resource
 from models import db, Comment, Post
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from datetime import datetime
 
 class AddComment(Resource):
     @jwt_required()
     def post(self, post_id):
         content = request.json.get('content')
-        user_id = get_jwt_identity()
+        user = get_jwt_identity()
 
         if not content:
             return jsonify({"message": "Content required"}), 400
@@ -17,11 +18,11 @@ class AddComment(Resource):
             return jsonify({'message': 'Post not available'}), 404
         
         # Create and add comment
-        comment = Comment(content=content, post_id=post_id, user_id=user_id)
+        comment = Comment(content=content,created_at=datetime.utcnow(),  post_id=post_id, user_id=user['id'])
         db.session.add(comment)
         db.session.commit()
 
-        return jsonify({"message": "Comment added successfully", "comment": comment.as_dict()}), 201
+        return {"message": "Comment added successfully", "comment": comment.as_dict()}, 201
 
 
 class GetComments(Resource):
@@ -32,8 +33,16 @@ class GetComments(Resource):
             return jsonify({"message": "Post not found"}), 404
 
         comments = Comment.query.filter_by(post_id=post_id).all()
-        return jsonify([comment.as_dict() for comment in comments]), 200
-
+        comments_list = []
+        for comment in comments:
+            comments_list.append({
+                "id": comment.id,
+                "content": comment.content,
+                "created_at": comment.created_at,
+                "user_id": comment.user_id
+                # Add other fields as needed
+            })
+        return comments_list
 
 class UpdateComment(Resource):
     @jwt_required()
