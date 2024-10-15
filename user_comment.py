@@ -30,7 +30,7 @@ class GetComments(Resource):
     def get(self, post_id):
         post = Post.query.get(post_id)
         if not post:
-            return jsonify({"message": "Post not found"}), 404
+            return {"message": "Post not found"}, 404
 
         comments = Comment.query.filter_by(post_id=post_id).all()
         comments_list = []
@@ -38,7 +38,7 @@ class GetComments(Resource):
             comments_list.append({
                 "id": comment.id,
                 "content": comment.content,
-                "created_at": comment.created_at,
+                "created_at":  comment.created_at.isoformat() if comment.created_at else None,
                 "user_id": comment.user_id
                 # Add other fields as needed
             })
