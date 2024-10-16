@@ -83,14 +83,17 @@ class Profile(db.Model):
     date_of_birth = db.Column(db.Date, nullable=True)
     user = db.relationship('User', backref=db.backref('profile', uselist=False))
 
+    # Use back_populates for better clarity
+    posts = db.relationship('Post', back_populates='profile', lazy='dynamic')
+
     def as_dict(self):
-        return{
+        return {
             "id": self.id,
             "user_id": self.user_id,
             "bio": self.bio,
             "profile_picture": self.profile_picture,
             "location": self.location,
-           'date_of_birth': self.date_of_birth.strftime('%Y-%m-%d') if self.date_of_birth else None,
+            'date_of_birth': self.date_of_birth.strftime('%Y-%m-%d') if self.date_of_birth else None,
         }
 
     def __repr__(self):
@@ -101,23 +104,26 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     content = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    profile_id = db.Column(db.Integer, db.ForeignKey('profile.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     image_url = db.Column(db.String, nullable=True)
     video_url = db.Column(db.String, nullable=True)
-
 
     user = db.relationship('User', back_populates='posts')
     comments = db.relationship('Comment', back_populates='post', lazy='dynamic')
     likes = db.relationship('Like', back_populates='post', lazy='dynamic')
     tags = db.relationship('PostTag', back_populates='post', lazy='dynamic')
-    
 
+    # Use back_populates to link with Profile
+    profile = db.relationship('Profile', back_populates='posts')
 
     def like_count(self):
         return Like.query.filter_by(post_id=self.id).count()
-    
 
     def as_dict(self):
+        username = self.user.username if self.user else None  # Adjust field name if needed
+        profile_picture = self.profile.profile_picture if self.profile else None
+        
         return {
             'id': self.id,
             'content': self.content,
@@ -125,6 +131,8 @@ class Post(db.Model):
             'video_url': self.video_url,
             'created_at': self.created_at.isoformat(),
             'user_id': self.user_id,
+            'username': username,
+            'profile_picture': profile_picture,
             'likes': self.like_count() 
         }
 

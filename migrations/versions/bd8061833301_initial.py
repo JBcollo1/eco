@@ -1,8 +1,8 @@
-"""empty message
+"""initial
 
-Revision ID: c191ddc6a08d
+Revision ID: bd8061833301
 Revises: 
-Create Date: 2024-09-29 10:24:32.018930
+Create Date: 2024-10-16 23:08:18.829291
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'c191ddc6a08d'
+revision = 'bd8061833301'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -70,16 +70,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('post',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('content', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('image_url', sa.String(), nullable=True),
-    sa.Column('video_url', sa.String(), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
     op.create_table('profile',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
@@ -87,6 +77,18 @@ def upgrade():
     sa.Column('profile_picture', sa.String(length=255), nullable=True),
     sa.Column('location', sa.String(length=100), nullable=True),
     sa.Column('date_of_birth', sa.Date(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('post',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('content', sa.String(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('profile_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('image_url', sa.String(), nullable=True),
+    sa.Column('video_url', sa.String(), nullable=True),
+    sa.ForeignKeyConstraint(['profile_id'], ['profile.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -137,8 +139,8 @@ def downgrade():
     op.drop_table('post_tag')
     op.drop_table('like')
     op.drop_table('comment')
-    op.drop_table('profile')
     op.drop_table('post')
+    op.drop_table('profile')
     op.drop_table('notification')
     op.drop_table('message')
     op.drop_table('follow')
