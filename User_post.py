@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from flask_restful import Resource
-from models import db, Post
+from models import db, Post, Profile
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import cloudinary.uploader  # Import the Cloudinary uploader
 
@@ -9,7 +9,22 @@ class Upload(Resource):
     def post(self, user_id):
         # Extract content from the request
         content = request.form.get('content')
+        # Fetch the current user's ID from the JWT token
+        current_user_id = get_jwt_identity()
+
+        if isinstance(current_user_id, dict):
+            current_user_id = current_user_id.get('id')
+        # Fetch the user's profile from the database
+        user_profile = Profile.query.filter_by(user_id=current_user_id).first()
         
+        if not user_profile:
+            return {'message': 'User profile not found'}, 404
+        
+        profile_id = user_profile.id
+
+        # Ensure the current user matches the requested user_id
+        if int(user_id) != current_user_id:
+            return {'message': 'Unauthorized'}, 403
        
 
         # Initialize photo and video URLs
@@ -30,7 +45,7 @@ class Upload(Resource):
                 video_url = cloudinary_response['secure_url']
 
             # Create a Post instance with the provided content and user_id
-            new_post = Post(content=content, user_id=user_id, image_url=photo_url, video_url=video_url)
+            new_post = Post(content=content, user_id=user_id, image_url=photo_url, video_url=video_url, profile_id=profile_id)
 
             # Save the post to the database
             db.session.add(new_post)
@@ -48,7 +63,7 @@ class Upload(Resource):
             return response_data, 201
 
         except Exception as e:
-            return jsonify({'message': str(e)}), 500  # Return a 500 error with the error message
+            return {'message': str(e)}, 500  
 
     @jwt_required()
     def patch(self, post_id):
