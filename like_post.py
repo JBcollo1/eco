@@ -44,3 +44,16 @@ class LikePost(Resource):
         db.session.commit()
 
         return {'message': 'Like removed successfully'}, 200
+    @jwt_required()
+    def get(self, post_id):
+        user = get_jwt_identity()
+        user_id = user.get('id') if isinstance(user, dict) else user
+
+        post = Post.query.get(post_id)
+        if not post:
+            return {"message": "Post not found"}, 404
+        
+        # Check if the post is liked by the user
+        like = Like.query.filter_by(post_id=post_id, user_id=user_id).first()
+        
+        return {"liked": bool(like)}, 200

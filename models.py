@@ -87,10 +87,12 @@ class Profile(db.Model):
     posts = db.relationship('Post', back_populates='profile', lazy='dynamic')
 
     def as_dict(self):
+        username = self.user.user_name if self.user else None 
         return {
             "id": self.id,
             "user_id": self.user_id,
             "bio": self.bio,
+            'username': username,
             "profile_picture": self.profile_picture,
             "location": self.location,
             'date_of_birth': self.date_of_birth.strftime('%Y-%m-%d') if self.date_of_birth else None,
@@ -121,7 +123,7 @@ class Post(db.Model):
         return Like.query.filter_by(post_id=self.id).count()
 
     def as_dict(self):
-        username = self.user.username if self.user else None  # Adjust field name if needed
+        username = self.user.user_name if self.user else None  # Adjust field name if needed
         profile_picture = self.profile.profile_picture if self.profile else None
         
         return {
