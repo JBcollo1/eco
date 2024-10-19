@@ -1,7 +1,7 @@
 from flask import jsonify, request
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import db, Like, Post
+from models import db, Like, Post, Profile, User
 
 class LikePost(Resource):
     @jwt_required()
@@ -57,3 +57,29 @@ class LikePost(Resource):
         like = Like.query.filter_by(post_id=post_id, user_id=user_id).first()
         
         return {"liked": bool(like)}, 200
+
+
+class GetLikedPosts(Resource):
+    @jwt_required()
+    def get(self):
+        user = get_jwt_identity()
+        user_id = user.get('id') if isinstance(user, dict) else user
+
+        # Query for all likes by the user
+        likes = Like.query.filter_by(user_id=user_id).all()
+
+        liked_posts = []
+        for like in likes:
+            post = Post.query.get(like.post_id)  # Individual query for each post
+            if post:
+                post_dict = post.as_dict()
+                profile = Profile.query.filter_by(user_id=post.user_id).first()  # Individual query for each profile
+                if profile:
+                    post_dict['profile_picture'] = profile.profile_picture
+                
+                user = User.query.get(post.user_id)  # Individual query for each user
+                if user:
+                    post_dict['username'] = user.user_name
+                liked_posts.append(post_dict)
+
+        return liked_posts, 200

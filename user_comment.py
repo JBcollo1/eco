@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from flask_restful import Resource
-from models import db, Comment, Post
+from models import db, Comment, Post, Profile, User
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 
@@ -35,12 +35,15 @@ class GetComments(Resource):
         comments = Comment.query.filter_by(post_id=post_id).all()
         comments_list = []
         for comment in comments:
+            profile = Profile.query.filter_by(user_id=comment.user_id).first()
+            user = User.query.filter_by(id=comment.user_id).first()
             comments_list.append({
                 "id": comment.id,
                 "content": comment.content,
-                "created_at":  comment.created_at.isoformat() if comment.created_at else None,
-                "user_id": comment.user_id
-                # Add other fields as needed
+                "created_at": comment.created_at.isoformat() if comment.created_at else None,
+                "user_id": comment.user_id,
+                "username": user.user_name if user else None,
+                "profile_pic": profile.profile_picture if profile else None,
             })
         return comments_list
 

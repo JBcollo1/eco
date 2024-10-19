@@ -11,7 +11,7 @@ from user_profile import UserProfile
 from dotenv import load_dotenv
 from User_post import Upload, PostListResource
 from user_comment import AddComment, GetComments, UpdateComment, DeleteComment, GetAllComments
-from like_post import LikePost
+from like_post import LikePost, GetLikedPosts
 app = Flask(__name__)
 api = Api(app)
 jwt = JWTManager(app)
@@ -67,6 +67,7 @@ api.add_resource(DeleteComment, '/comment/<int:comment_id>')
 
 
 api.add_resource(LikePost, '/post/<int:post_id>/like')
+api.add_resource(GetLikedPosts, '/user/liked_posts')
 
 if __name__ == '__main__':
     app.run(debug=True)
