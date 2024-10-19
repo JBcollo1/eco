@@ -7,15 +7,15 @@ from datetime import datetime
 class AddComment(Resource):
     @jwt_required()
     def post(self, post_id):
-        content = request.json.get('content')
+        content = request.json.get('comment')
         user = get_jwt_identity()
 
         if not content:
-            return jsonify({"message": "Content required"}), 400
+            return {"message": "Content required"}, 400
         
         post = Post.query.get(post_id)
         if not post:
-            return jsonify({'message': 'Post not available'}), 404
+            return {'message': 'Post not available'}, 404
         
         # Create and add comment
         comment = Comment(content=content,created_at=datetime.utcnow(),  post_id=post_id, user_id=user['id'])
@@ -49,18 +49,18 @@ class UpdateComment(Resource):
     def patch(self, comment_id):
         comment = Comment.query.get(comment_id)
         if not comment:
-            return jsonify({"message": "Comment not found"}), 404
+            return {"message": "Comment not found"}, 404
 
         user_id = get_jwt_identity()
         if comment.user_id != user_id:
-            return jsonify({"message": "Not authorized to update this comment"}), 403
+            return {"message": "Not authorized to update this comment"}, 403
 
         content = request.json.get("content")
         if content:
             comment.content = content
             db.session.commit()
 
-        return jsonify(comment.as_dict()), 200
+        return comment.as_dict(), 200
 
 
 class DeleteComment(Resource):
@@ -68,11 +68,11 @@ class DeleteComment(Resource):
     def delete(self, comment_id):
         comment = Comment.query.get(comment_id)
         if not comment:
-            return jsonify({"message": "Comment not found"}), 404
+            return {"message": "Comment not found"}, 404
 
         user_id = get_jwt_identity()
         if comment.user_id != user_id:
-            return jsonify({"message": "Not authorized to delete this comment"}), 403
+            return {"message": "Not authorized to delete this comment"}, 403
 
         db.session.delete(comment)
         db.session.commit()
