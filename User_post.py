@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from flask_restful import Resource
-from models import db, Post, Profile
+from models import db, Post, Profile, User
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import cloudinary.uploader  # Import the Cloudinary uploader
 
@@ -144,3 +144,18 @@ class PostListResource(Resource):
             'has_next_page': posts.has_next,  # Indicate if more pages are available
             'has_prev_page': posts.has_prev
         }, 200
+
+class UserPostsResource(Resource):
+    @jwt_required()
+    def get(self):
+        current_user = get_jwt_identity()
+        current_user_id = current_user.get('id') if isinstance(current_user, dict) else current_user
+
+        # Fetch posts for the current user
+        posts = Post.query.filter_by(user_id=current_user_id).order_by(Post.created_at.desc()).all()
+        return [post.as_dict() for post in posts], 200
+    
+
+
+
+

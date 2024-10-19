@@ -9,7 +9,7 @@ from login import RegisterUser, LoginUser, VerifyEmail, ResendVerification
 from mail import mail
 from user_profile import UserProfile
 from dotenv import load_dotenv
-from User_post import Upload, PostListResource
+from User_post import Upload, PostListResource, UserPostsResource
 from user_comment import AddComment, GetComments, UpdateComment, DeleteComment, GetAllComments
 from like_post import LikePost, GetLikedPosts
 app = Flask(__name__)
@@ -64,7 +64,7 @@ api.add_resource(GetComments, '/post/<int:post_id>/comments')
 api.add_resource(UpdateComment, '/comment/<int:comment_id>')
 api.add_resource(GetAllComments, '/post/comments')
 api.add_resource(DeleteComment, '/comment/<int:comment_id>')
-
+api.add_resource(UserPostsResource, '/user/posts')
 
 api.add_resource(LikePost, '/post/<int:post_id>/like')
 api.add_resource(GetLikedPosts, '/user/liked_posts')
