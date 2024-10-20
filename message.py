@@ -80,23 +80,24 @@ class GetConversation(Resource):
             ((Message.sender_id == receiver_id) & (Message.receiver_id == current_user_id))
         ).order_by(Message.created_at.asc()).all()
 
-        conversation = []
-        for message in messages:
-            conversation.append({
-                'id': message.id,
-                'sender_id': message.sender_id,
-                'receiver_id': message.receiver_id,
-                'content': message.content,
-                'timestamp': message.created_at.isoformat(),
-                'is_read': message.is_read
-            })
+        # Fetch profiles for both users at once
+        profiles = {
+            p.user_id: p for p in Profile.query.filter(Profile.user_id.in_([current_user_id, receiver_id])).all()
+        }
+
+        conversation = [{
+            'id': message.id,
+            'sender_id': message.sender_id,
+            'receiver_id': message.receiver_id,
+            'content': message.content,
+            'timestamp': message.created_at.isoformat(),
+            'is_read': message.is_read,
+            'sender_profile_picture': profiles.get(message.sender_id, {}).profile_picture,
+            'receiver_profile_picture': profiles.get(message.receiver_id, {}).profile_picture
+        } for message in messages]
 
         # Mark messages as read
-        unread_messages = Message.query.filter(
-            Message.receiver_id == current_user_id,
-            Message.sender_id == receiver_id,
-            Message.is_read == False
-        ).all()
+        unread_messages = [msg for msg in messages if msg.receiver_id == current_user_id and not msg.is_read]
         for message in unread_messages:
             message.is_read = True
         db.session.commit()
