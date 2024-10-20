@@ -34,6 +34,9 @@ class User(db.Model):
                                  cascade='all, delete-orphan')
     notifications = db.relationship('Notification', back_populates='user', lazy='dynamic')
 
+    sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', back_populates='sender', lazy='dynamic')
+    received_messages = db.relationship('Message', foreign_keys='Message.receiver_id', back_populates='receiver', lazy='dynamic')
+
     def follow(self, user):
         """Follow a user."""
         if not self.is_following(user):
@@ -201,9 +204,10 @@ class Message(db.Model):
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_read = db.Column(db.Boolean, default=False)
 
-    sender = db.relationship('User', foreign_keys=[sender_id])
-    receiver = db.relationship('User', foreign_keys=[receiver_id])
+    sender = db.relationship('User', foreign_keys=[sender_id], back_populates='sent_messages')
+    receiver = db.relationship('User', foreign_keys=[receiver_id], back_populates='received_messages')
 
     def as_dict(self):
         return {
@@ -211,11 +215,12 @@ class Message(db.Model):
             'sender_id': self.sender_id,
             'receiver_id': self.receiver_id,
             'content': self.content,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat(),
+            'is_read': self.is_read
         }
 
     def __repr__(self):
-        return f'<Message {self.id}>'
+        return f'<Message {self.id}: {self.sender_id} to {self.receiver_id}>'
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
