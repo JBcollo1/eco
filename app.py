@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from User_post import Upload, PostListResource, UserPostsResource
 from user_comment import AddComment, GetComments, UpdateComment, DeleteComment, GetAllComments
 from like_post import LikePost, GetLikedPosts
-from message import SendMessage, GetConversation
+from message import SendMessage, GetConversation, GetConversationList, GetUserList
 
 app = Flask(__name__)
 api = Api(app)
@@ -71,10 +71,10 @@ api.add_resource(UserPostsResource, '/user/posts')
 api.add_resource(LikePost, '/post/<int:post_id>/like')
 api.add_resource(GetLikedPosts, '/user/liked_posts')
 
-api.add_resource(SendMessage, '/message/send/<int:recipient_id>')
-api.add_resource(GetConversation, '/conversation/<int:recipient_id>')
-  
-
+api.add_resource(SendMessage, '/message/send/<int:receiver_id>')
+api.add_resource(GetConversation, '/conversation/<int:receiver_id>')
+api.add_resource(GetConversationList, '/conversations')
+api.add_resource(GetUserList, '/users')
 
 if __name__ == '__main__':
     app.run(debug=True)
