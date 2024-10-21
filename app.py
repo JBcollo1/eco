@@ -13,6 +13,7 @@ from User_post import Upload, PostListResource, UserPostsResource
 from user_comment import AddComment, GetComments, UpdateComment, DeleteComment, GetAllComments
 from like_post import LikePost, GetLikedPosts
 from message import SendMessage, GetConversation, GetConversationList, GetUserList
+from follow_service import FollowUser, UnfollowUser, GetFollowers, GetFollowing
 
 app = Flask(__name__)
 api = Api(app)
@@ -75,6 +76,15 @@ api.add_resource(SendMessage, '/message/send/<int:receiver_id>')
 api.add_resource(GetConversation, '/conversation/<int:receiver_id>')
 api.add_resource(GetConversationList, '/conversations')
 api.add_resource(GetUserList, '/users')
+
+
+
+
+api.add_resource(FollowUser, '/follow/<int:user_id>')
+api.add_resource(UnfollowUser, '/unfollow/<int:user_id>')
+api.add_resource(FollowStatus, '/follow-status/<int:user_id>')
+api.add_resource(FollowerCount, '/follower-count/<int:user_id>')
+api.add_resource(FollowingCount, '/following-count/<int:user_id>')
 
 if __name__ == '__main__':
     app.run(debug=True)
