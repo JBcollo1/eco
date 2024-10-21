@@ -129,32 +129,37 @@ class GetConversationList(Resource):
         ).subquery()
 
         # Query to get the conversations with the latest message
-        conversations = db.session.query(Message).join(
+        conversations = db.session.query(Message, User, Profile).join(
             latest_messages,
             Message.id == latest_messages.c.max_id
         ).filter(
             (Message.sender_id == current_user_id) | (Message.receiver_id == current_user_id)
+        ).outerjoin(
+            User, User.id == case(
+                (Message.sender_id == current_user_id, Message.receiver_id),
+                else_=Message.sender_id
+            )
+        ).outerjoin(
+            Profile, Profile.user_id == User.id
         ).order_by(Message.created_at.desc()).all()
 
         conversation_list = []
-        for conversation in conversations:
-            other_user_id = conversation.receiver_id if conversation.sender_id == current_user_id else conversation.sender_id
-            other_user = User.query.get(other_user_id)
-            
+        for message, other_user, profile in conversations:
             # Count unread messages for this conversation
             unread_count = Message.query.filter(
-                Message.sender_id == other_user_id,
+                Message.sender_id == other_user.id,
                 Message.receiver_id == current_user_id,
                 Message.is_read == False
             ).count()
             
             conversation_list.append({
-                'user_id': other_user_id,
+                'user_id': other_user.id,
                 'username': other_user.user_name,
-                'last_message': conversation.content,
-                'timestamp': conversation.created_at.isoformat(),
-                'is_read': conversation.is_read,
-                'unread_count': unread_count
+                'last_message': message.content,
+                'timestamp': message.created_at.isoformat(),
+                'is_read': message.is_read,
+                'unread_count': unread_count,
+                'picture': profile.profile_picture if profile else None
             })
 
         return conversation_list, 200
