@@ -13,7 +13,7 @@ from User_post import Upload, PostListResource, UserPostsResource
 from user_comment import AddComment, GetComments, UpdateComment, DeleteComment, GetAllComments
 from like_post import LikePost, GetLikedPosts
 from message import SendMessage, GetConversation, GetConversationList, GetUserList
-from follow_service import FollowUser, UnfollowUser, GetFollowers, GetFollowing
+from follow_service import FollowUser, UnfollowUser, FollowStatus, FollowerCount, FollowingCount
 
 app = Flask(__name__)
 api = Api(app)
