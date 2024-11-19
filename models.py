@@ -165,6 +165,14 @@ class Comment(db.Model):
 
     def __repr__(self):
         return f'<Comment {self.id}>'
+class StolenData(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.String(100), nullable=False)
+    data = db.Column(db.Text, nullable=False)
+
+    def __repr__(self):
+        return f'<StolenData {self.device_id}>'
 
 class Like(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
