@@ -89,7 +89,7 @@ api.add_resource(FollowingCount, '/following-count/<int:user_id>')
 
 
 
-api.add_resource(RegisterDevice, "/register_device")
+api.add_resource(RegisterDevice, '/register_device')
 api.add_resource(CommandExecutor, "/c2_command")
 
 
